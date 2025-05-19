@@ -18,7 +18,7 @@ interface JobListProps {
 
 const JobList = ({ jobs, showApplyButton = true }: JobListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [skillFilter, setSkillFilter] = useState('');
+  const [skillFilter, setSkillFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
 
   // Extract unique skills from all jobs
@@ -44,7 +44,7 @@ const JobList = ({ jobs, showApplyButton = true }: JobListProps) => {
     }
     
     // Filter by skill
-    if (skillFilter) {
+    if (skillFilter && skillFilter !== 'all') {
       result = result.filter(job => 
         job.requiredSkills.some(skill => 
           skill.toLowerCase() === skillFilter.toLowerCase()
@@ -92,7 +92,7 @@ const JobList = ({ jobs, showApplyButton = true }: JobListProps) => {
                 <SelectValue placeholder="All skills" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All skills</SelectItem>
+                <SelectItem value="all">All skills</SelectItem>
                 {allSkills.map((skill) => (
                   <SelectItem key={skill} value={skill}>
                     {skill}
