@@ -20,6 +20,9 @@ import RecruiterDashboard from "./pages/recruiter/RecruiterDashboard";
 import PostJob from "./pages/recruiter/PostJob";
 import DeveloperDashboard from "./pages/developer/DeveloperDashboard";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/profile/Profile";
+import EditProfile from "./pages/profile/EditProfile";
+import MyApplications from "./pages/developer/MyApplications";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { UserRole } from "./types";
 
@@ -43,6 +46,24 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/jobs" element={<JobListing />} />
             <Route path="/jobs/:jobId" element={<JobDetails />} />
+            
+            {/* Profile Routes */}
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile/edit" 
+              element={
+                <ProtectedRoute>
+                  <EditProfile />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Developer Routes */}
             <Route 
@@ -69,6 +90,14 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/developer/applications" 
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.DEVELOPER]}>
+                  <MyApplications />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Recruiter Routes */}
             <Route 
@@ -84,6 +113,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={[UserRole.RECRUITER]}>
                   <PostJob />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/recruiter/applications" 
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.RECRUITER]}>
+                  <MyApplications />
                 </ProtectedRoute>
               } 
             />
