@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,13 +49,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let userData = await fetchUserData(authUser.id);
     
     if (!userData) {
-      // For demo purposes, create a mock profile if none exists
-      // In a production app, you would handle this differently
+      // Create a new user profile in the users table if none exists
+      const nameParts = authUser.user_metadata?.name ? authUser.user_metadata.name.split(' ') : ['User', ''];
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ');
+      const role = authUser.user_metadata?.role || UserRole.DEVELOPER;
+      
+      const newUserProfile = {
+        id: authUser.id,
+        email: authUser.email,
+        first_name: firstName,
+        last_name: lastName,
+        role: role
+      };
+      
+      const { data, error } = await supabase
+        .from('users')
+        .insert([newUserProfile])
+        .select();
+      
+      if (error) {
+        console.error('Error creating user profile:', error);
+      } else {
+        userData = data[0];
+      }
+    }
+    
+    if (!userData) {
+      // If still no user data, create a default user object
       const defaultUser: Partial<User> = {
         id: authUser.id,
         name: authUser.user_metadata?.name || 'User',
         email: authUser.email,
-        role: UserRole.DEVELOPER,
+        role: authUser.user_metadata?.role || UserRole.DEVELOPER,
         createdAt: new Date()
       };
       
@@ -193,29 +220,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
         options: {
           data: {
+            name: name,
+            role: role,
             first_name: name.split(' ')[0],
-            last_name: name.split(' ').slice(1).join(' '),
-            role: role
+            last_name: name.split(' ').slice(1).join(' ')
           }
         }
       });
       
       if (error) throw error;
       
-      // If successful, set the user
-      const newUser: User = {
-        id: data.user?.id || `user_${Math.random().toString(36).substr(2, 9)}`,
-        name,
-        email,
-        role,
-        createdAt: new Date()
-      };
-      
-      setUser(newUser);
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created successfully."
-      });
+      if (data.user) {
+        // Manually create the user in the users table
+        const nameParts = name.split(' ');
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ');
+        
+        const newUser = {
+          id: data.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          role: role
+        };
+        
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([newUser]);
+          
+        if (insertError) {
+          console.error('Error creating user profile:', insertError);
+        }
+        
+        // If successful, set the user
+        const createdUser: User = {
+          id: data.user.id,
+          name,
+          email,
+          role,
+          createdAt: new Date()
+        };
+        
+        setUser(createdUser);
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created successfully."
+        });
+      }
       
     } catch (err: any) {
       console.error('Registration error:', err);
