@@ -10,11 +10,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserRole } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const EditProfile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -50,18 +52,78 @@ const EditProfile = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // In a real app, you'd update the user profile in the database
-    // For our mock system, we'll just show a toast
-    setTimeout(() => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to update your profile",
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const nameParts = formData.name.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      const skillsArray = formData.skills.split(',').map(skill => skill.trim()).filter(Boolean);
+      const yearsExperience = formData.experience ? 
+        parseInt(formData.experience.replace(/[^0-9]/g, '')) : 
+        null;
+      
+      // Try to update in Supabase
+      const { error } = await supabase
+        .from('users')
+        .update({
+          first_name: firstName,
+          last_name: lastName,
+          location: formData.location,
+          bio: formData.bio,
+          skills: skillsArray,
+          hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+          years_experience: yearsExperience,
+          company: formData.company,
+        })
+        .eq('id', user.id);
+      
+      if (error) {
+        console.error('Error updating profile:', error);
+      }
+      
+      // Update local storage for demo mode
+      const updatedUser = {
+        ...user,
+        name: formData.name,
+        location: formData.location,
+        bio: formData.bio,
+        skills: skillsArray,
+        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
+        experience: formData.experience,
+        company: formData.company,
+      };
+      
+      localStorage.setItem('freelance_user', JSON.stringify(updatedUser));
+      
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully.",
       });
+      
       navigate('/profile');
-    }, 1000);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was an error updating your profile. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!user) return null;
@@ -179,7 +241,9 @@ const EditProfile = () => {
                 <Button type="button" variant="outline" onClick={() => navigate('/profile')}>
                   Cancel
                 </Button>
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
               </div>
             </form>
           </CardContent>

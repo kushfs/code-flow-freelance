@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { addJob } from '@/services/mockDataService';
 import { JobStatus } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const JobPostForm = () => {
   const [title, setTitle] = useState('');
@@ -19,6 +20,7 @@ const JobPostForm = () => {
   const [location, setLocation] = useState('Remote');
   const [skill, setSkill] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -35,7 +37,7 @@ const JobPostForm = () => {
     setSkills(skills.filter((s) => s !== skillToRemove));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
@@ -46,8 +48,65 @@ const JobPostForm = () => {
       });
       return;
     }
+    
+    setIsSubmitting(true);
 
     try {
+      // Try to insert into Supabase first
+      const jobData = {
+        title,
+        description,
+        required_skills: skills,
+        budget: parseFloat(budget),
+        duration,
+        status: 'open',
+        recruiter_id: user.id,
+        location,
+      };
+      
+      const { data: jobResult, error } = await supabase
+        .from('jobs')
+        .insert(jobData)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(error.message);
+      }
+      
+      // If Supabase insert succeeds, use the returned data
+      toast({
+        title: "Job Posted",
+        description: "Your job has been successfully posted.",
+      });
+      
+      if (jobResult) {
+        navigate(`/jobs/${jobResult.id}`);
+      } else {
+        // Fallback to mock data service if needed
+        const newJob = addJob({
+          title,
+          description,
+          requiredSkills: skills,
+          budget: parseFloat(budget),
+          duration,
+          status: JobStatus.OPEN,
+          recruiterId: user.id,
+          location,
+        });
+        
+        navigate(`/jobs/${newJob.id}`);
+      }
+    } catch (error) {
+      console.error('Error posting job:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was an error posting your job. Using fallback method.",
+      });
+      
+      // Fallback to mock data
       const newJob = addJob({
         title,
         description,
@@ -59,19 +118,9 @@ const JobPostForm = () => {
         location,
       });
       
-      toast({
-        title: "Job Posted",
-        description: "Your job has been successfully posted.",
-      });
-      
       navigate(`/jobs/${newJob.id}`);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "There was an error posting your job. Please try again.",
-      });
-      console.error('Error posting job:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -178,8 +227,8 @@ const JobPostForm = () => {
         </div>
         
         <div className="mt-6">
-          <Button type="submit" className="w-full">
-            Post Job
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Posting..." : "Post Job"}
           </Button>
         </div>
       </form>

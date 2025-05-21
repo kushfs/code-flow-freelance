@@ -7,6 +7,10 @@ import { UserRole } from '@/types';
 const Navbar = () => {
   const { user, logout } = useAuth();
 
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <header className="border-b bg-white">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -44,7 +48,7 @@ const Navbar = () => {
               <Link to="/profile">
                 <Button variant="outline" size="sm">Profile</Button>
               </Link>
-              <Button variant="ghost" size="sm" onClick={logout}>Logout</Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>Logout</Button>
             </>
           ) : (
             <>
