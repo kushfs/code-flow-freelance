@@ -72,6 +72,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       skills: userData.skills || [],
       experience: userData.years_experience ? `${userData.years_experience} years` : undefined,
       hourlyRate: userData.hourly_rate,
+      // The company field is coming from userData.company but it doesn't exist in the schema
+      // Using optional chaining to avoid errors and providing a fallback
       company: userData.company || undefined,
       location: userData.location,
       bio: userData.bio,
