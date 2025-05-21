@@ -52,7 +52,7 @@ const JobPostForm = () => {
     setIsSubmitting(true);
 
     try {
-      // Try to insert into Supabase first
+      // Prepare job data
       const jobData = {
         title,
         description,
@@ -64,6 +64,9 @@ const JobPostForm = () => {
         location,
       };
       
+      console.log("Submitting job with data:", jobData);
+      
+      // Try to insert into Supabase
       const { data: jobResult, error } = await supabase
         .from('jobs')
         .insert(jobData)
@@ -75,12 +78,12 @@ const JobPostForm = () => {
         throw new Error(error.message);
       }
       
-      // If Supabase insert succeeds, use the returned data
       toast({
         title: "Job Posted",
         description: "Your job has been successfully posted.",
       });
       
+      // Navigate to the job details page
       if (jobResult) {
         navigate(`/jobs/${jobResult.id}`);
       } else {
