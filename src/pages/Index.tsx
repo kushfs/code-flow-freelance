@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
@@ -6,14 +7,82 @@ import { Button } from '@/components/ui/button';
 import { UserRole } from '@/types';
 import { getAllJobs } from '@/services/mockDataService';
 import JobList from '@/components/jobs/JobList';
+import { supabase } from '@/integrations/supabase/client';
+import { Job } from '@/types';
 
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  const featuredJobs = getAllJobs()
-    .filter(job => job.status === 'open')
-    .slice(0, 3);
+  useEffect(() => {
+    const fetchFeaturedJobs = async () => {
+      try {
+        // First try to get jobs from Supabase
+        const { data: supabaseJobs, error } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            recruiter:recruiter_id (
+              id, first_name, last_name, email, company, location
+            )
+          `)
+          .eq('status', 'open')
+          .order('created_at', { ascending: false })
+          .limit(3);
+          
+        if (error) {
+          console.error("Error fetching featured jobs from Supabase:", error);
+          throw error;
+        }
+        
+        // Transform Supabase data to match our Job type
+        if (supabaseJobs && supabaseJobs.length > 0) {
+          const transformedJobs = supabaseJobs.map((job: any): Job => ({
+            id: job.id,
+            title: job.title,
+            description: job.description,
+            requiredSkills: job.required_skills || [],
+            budget: job.budget,
+            duration: job.duration || undefined,
+            status: job.status,
+            recruiterId: job.recruiter_id,
+            location: job.location || undefined,
+            createdAt: new Date(job.created_at),
+            recruiter: job.recruiter ? {
+              id: job.recruiter.id,
+              name: `${job.recruiter.first_name} ${job.recruiter.last_name}`,
+              email: job.recruiter.email,
+              role: 'recruiter',
+              company: job.recruiter.company,
+              location: job.recruiter.location,
+              createdAt: new Date()
+            } : undefined
+          }));
+          
+          setFeaturedJobs(transformedJobs);
+        } else {
+          // Fallback to mock data if no jobs found in Supabase
+          const mockJobs = getAllJobs()
+            .filter(job => job.status === 'open')
+            .slice(0, 3);
+          setFeaturedJobs(mockJobs);
+        }
+      } catch (err) {
+        console.error("Failed to fetch featured jobs:", err);
+        // Fallback to mock data on error
+        const mockJobs = getAllJobs()
+          .filter(job => job.status === 'open')
+          .slice(0, 3);
+        setFeaturedJobs(mockJobs);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchFeaturedJobs();
+  }, []);
 
   const handleGetStarted = () => {
     if (user) {
@@ -113,7 +182,13 @@ const Index = () => {
             </Button>
           </div>
           
-          <JobList jobs={featuredJobs} />
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <p className="text-gray-500">Loading jobs...</p>
+            </div>
+          ) : (
+            <JobList jobs={featuredJobs} />
+          )}
         </div>
       </section>
 

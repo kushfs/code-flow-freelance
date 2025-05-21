@@ -61,6 +61,7 @@ export type Database = {
           description: string
           duration: string | null
           id: string
+          location: string | null
           recruiter_id: string
           required_skills: string[]
           status: string
@@ -73,6 +74,7 @@ export type Database = {
           description: string
           duration?: string | null
           id?: string
+          location?: string | null
           recruiter_id: string
           required_skills: string[]
           status?: string
@@ -85,6 +87,7 @@ export type Database = {
           description?: string
           duration?: string | null
           id?: string
+          location?: string | null
           recruiter_id?: string
           required_skills?: string[]
           status?: string

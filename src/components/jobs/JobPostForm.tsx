@@ -66,7 +66,7 @@ const JobPostForm = () => {
       
       console.log("Submitting job with data:", jobData);
       
-      // Try to insert into Supabase
+      // Insert into Supabase
       const { data: jobResult, error } = await supabase
         .from('jobs')
         .insert(jobData)
@@ -78,6 +78,8 @@ const JobPostForm = () => {
         throw new Error(error.message);
       }
       
+      console.log("Job posted successfully:", jobResult);
+      
       toast({
         title: "Job Posted",
         description: "Your job has been successfully posted.",
@@ -87,19 +89,7 @@ const JobPostForm = () => {
       if (jobResult) {
         navigate(`/jobs/${jobResult.id}`);
       } else {
-        // Fallback to mock data service if needed
-        const newJob = addJob({
-          title,
-          description,
-          requiredSkills: skills,
-          budget: parseFloat(budget),
-          duration,
-          status: JobStatus.OPEN,
-          recruiterId: user.id,
-          location,
-        });
-        
-        navigate(`/jobs/${newJob.id}`);
+        throw new Error("Failed to retrieve job data after posting");
       }
     } catch (error) {
       console.error('Error posting job:', error);
